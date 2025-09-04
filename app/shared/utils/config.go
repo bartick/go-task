@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"os"
@@ -8,15 +8,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var config *model.Configuration
-
-func LoadConfig() error {
+func LoadConfig() (*model.Configuration, error) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Error("No .env file found, reading from environment")
 	}
 
-	config = &model.Configuration{
+	config := &model.Configuration{
 		Application: model.ApplicationConfig{
 			LogLevel: getEnv("LOG_LEVEL", "info"),
 		},
@@ -34,7 +32,7 @@ func LoadConfig() error {
 		},
 	}
 
-	return nil
+	return config, nil
 
 }
 
