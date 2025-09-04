@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bartick/ringover-task/app/model"
+	"github.com/bartick/go-task/app/model"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )

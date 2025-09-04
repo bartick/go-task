@@ -3,10 +3,10 @@ package handler_test
 import (
 	"sync"
 
-	"github.com/bartick/ringover-task/app/database"
-	"github.com/bartick/ringover-task/app/model"
-	"github.com/bartick/ringover-task/app/route"
-	"github.com/bartick/ringover-task/app/shared/utils"
+	"github.com/bartick/go-task/app/database"
+	"github.com/bartick/go-task/app/model"
+	"github.com/bartick/go-task/app/route"
+	"github.com/bartick/go-task/app/shared/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"

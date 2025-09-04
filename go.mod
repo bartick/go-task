@@ -1,4 +1,4 @@
-module github.com/bartick/ringover-task
+module github.com/bartick/go-task
 
 go 1.24.3
 

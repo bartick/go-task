@@ -1,6 +1,6 @@
 # --- Configuration ---
 # Variables are defined here for easy modification and reuse.
-CONTAINER_NAME := ringover-task-db
+CONTAINER_NAME := go-task-db
 DATAMODEL_DIR := ./datamodel
 DATASET_DIR := ./dataset
 MYSQL_USER := root
@@ -65,7 +65,7 @@ watch:
 
 # Build the application.
 build:
-	go build -o ./ringover-task ./app/cmd/ringover-task
+	go build -o ./go-task ./app/cmd/go-task
 
 # Test
 test:

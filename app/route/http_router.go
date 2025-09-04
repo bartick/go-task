@@ -1,8 +1,8 @@
 package route
 
 import (
-	"github.com/bartick/ringover-task/app/controller/handler"
-	"github.com/bartick/ringover-task/app/route/middleware"
+	"github.com/bartick/go-task/app/controller/handler"
+	"github.com/bartick/go-task/app/route/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 )

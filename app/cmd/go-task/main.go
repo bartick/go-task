@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/bartick/ringover-task/app/model"
-	"github.com/bartick/ringover-task/app/shared/utils"
+	"github.com/bartick/go-task/app/model"
+	"github.com/bartick/go-task/app/shared/utils"
 	"go.uber.org/zap"
 )
 

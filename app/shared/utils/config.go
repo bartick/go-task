@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bartick/ringover-task/app/model"
+	"github.com/bartick/go-task/app/model"
 	"github.com/joho/godotenv"
 )
 

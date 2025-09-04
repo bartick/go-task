@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bartick/ringover-task/app/database"
-	"github.com/bartick/ringover-task/app/route"
+	"github.com/bartick/go-task/app/database"
+	"github.com/bartick/go-task/app/route"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
