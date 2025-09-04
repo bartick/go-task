@@ -133,7 +133,19 @@ const (
 	`
 
 	queryDeleteTask = `
-	DELETE FROM tasks WHERE id = ?
+	WITH RECURSIVE task_hierarchy AS (
+		SELECT id, parent_task_id 
+		FROM tasks 
+		WHERE id = ?
+		
+		UNION ALL
+		
+		SELECT t.id, t.parent_task_id
+		FROM tasks t
+		INNER JOIN task_hierarchy th ON t.parent_task_id = th.id
+	)
+	DELETE FROM tasks 
+	WHERE id IN (SELECT id FROM task_hierarchy);
 	`
 )
 
@@ -221,12 +233,15 @@ func UpdateTask(db *sqlx.DB, taskID uint64, updates *UpdateTaskRequest) (int64, 
 	if err != nil {
 		return 0, err
 	}
-	return res.LastInsertId()
+	return res.RowsAffected()
 }
 
-func DeleteTask(db *sqlx.DB, taskID uint64) error {
-	_, err := db.Exec(queryDeleteTask, taskID)
-	return err
+func DeleteTask(db *sqlx.DB, taskID uint64) (int64, error) {
+	req, err := db.Exec(queryDeleteTask, taskID)
+	if err != nil {
+		return 0, err
+	}
+	return req.RowsAffected()
 }
 
 func GetByID(db *sqlx.DB, taskID int64) (*Task, error) {
