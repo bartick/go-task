@@ -39,3 +39,40 @@ go build -o ./go-task ./app/cmd/go-task
 # Or Run with air
 make watch
 ```
+
+
+## Usage
+
+Routes:
+- `GET /tasks`: Retrieve all tasks
+- `GET /tasks/{id}`: Retrieve a specific task by ID
+- `POST /tasks`: Create a new task
+- `PATCH /tasks/{id}`: Update an existing task by ID
+- `DELETE /tasks/{id}`: Delete a task by ID
+- `GET /tasks/{id}/subtasks`: Retrieve all subtasks for a specific task (and all nested subtasks)
+
+Route Body
+- `POST /tasks`
+```json
+{
+    "title": "Task Title",
+    "description": "Task Description", // Optional
+    "status": "pending", // or "in_progress", "completed"
+    "priority": 1, // integer value for task priority, higher number means higher priority
+    "due_date": "2023-12-31T23:59:59Z", // Optional, in ISO 8601 format
+    "parent_id": 1, // Optional, ID of the parent task if it's a subtask
+    "category_name": "Backend" // Optional, or Frontend, Bug, Feature
+}
+```
+- `PATCH /tasks/{id}`
+```json
+{
+    "title": "Updated Task Title", // Optional
+    "description": "Updated Task Description", // Optional
+    "status": "in_progress", // Optional, can be "pending", "in_progress", "completed" (the software do not have a check to change to "completed" if has completed_at < NOW())
+    "priority": 2, // Optional, integer value for task priority, higher number means higher priority
+    "due_date": "2024-01-15T23:59:59Z", // Optional, in ISO 8601 format
+    "completed_at": "2024-01-10T12:00:00Z", // Optional, in ISO 8601 format
+    "parent_id": 2, // Optional, ID of the new parent task if changing
+    "category_name": "Frontend" // Optional, or Backend, Bug, Feature
+}
