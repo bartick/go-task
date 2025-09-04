@@ -129,6 +129,13 @@ func HandlerUpdateTask(c *gin.Context) {
 		return
 	}
 
+	// check if everything is nil
+	if !req.Title.Valid() && !req.Description.Valid() && !req.Status.Valid() && !req.Priority.Valid() &&
+		!req.DueDate.Valid() && !req.CompletedAt.Valid() && !req.ParentTaskID.Valid() && !req.CategoryName.Valid() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
+		return
+	}
+
 	db, ok := c.MustGet("db").(*sqlx.DB)
 	if !ok {
 		log.Error("Failed to get database connection")
@@ -136,7 +143,7 @@ func HandlerUpdateTask(c *gin.Context) {
 		return
 	}
 
-	_, err = model.UpdateTask(db, taskID, &req)
+	effected, err := model.UpdateTask(db, taskID, &req)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Unable to update Task"})
@@ -144,6 +151,11 @@ func HandlerUpdateTask(c *gin.Context) {
 		}
 		log.Error("Failed to update task", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
+		return
+	}
+
+	if effected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
@@ -164,7 +176,7 @@ func HandlerDeleteTask(c *gin.Context) {
 		return
 	}
 
-	err = model.DeleteTask(db, taskID)
+	effected, err := model.DeleteTask(db, taskID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
@@ -172,6 +184,11 @@ func HandlerDeleteTask(c *gin.Context) {
 		}
 		log.Error("Failed to delete task", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
+		return
+	}
+
+	if effected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 

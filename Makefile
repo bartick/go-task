@@ -1,6 +1,6 @@
 # --- Configuration ---
 # Variables are defined here for easy modification and reuse.
-CONTAINER_NAME := ringover-database
+CONTAINER_NAME := ringover-task-db
 DATAMODEL_DIR := ./datamodel
 DATASET_DIR := ./dataset
 MYSQL_USER := root
@@ -67,6 +67,10 @@ watch:
 build:
 	go build -o ./ringover-task ./app/cmd/ringover-task
 
+# Test
+test:
+	go test -v ./app/controller/handler/...
+
 # A simple help target to explain how to use the Makefile.
 help:
 	@echo "Available commands:"
@@ -79,4 +83,4 @@ help:
 	@echo "  make build       - Builds the application binary."
 
 # --- Housekeeping ---
-.PHONY: default help db-up db-down db-migrate db-reset watch build
+.PHONY: default help db-up db-down db-migrate db-reset watch build test
