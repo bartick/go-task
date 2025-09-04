@@ -1,0 +1,6 @@
+DROP DATABASE IF EXISTS tasking;
+CREATE DATABASE tasking;
+USE tasking;
+
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS categories;
