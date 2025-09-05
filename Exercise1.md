@@ -6,6 +6,16 @@ The given `CREATE TABLE` statement defines `idx_parent` and `idx_category`. For 
 
 However, the `queryGetTaskHierarchy` in `model/tasks.go` gives a strong clue about how tasks are sorted: `ORDER BY th.priority DESC, th.created_at ASC`. A typical `GET /tasks` endpoint would likely use this same sorting logic.
 
+### Index Type
+
+- **Type:** `BTREE`  
+- **Columns:** `(priority DESC, created_at ASC)`  
+- **Purpose:**  
+  - Speeds up the `ORDER BY` operation.  
+  - Can help with filtering by `priority` or `created_at` in future queries.
+
+**Note:** The existing `idx_parent` and `idx_category` are **single-column indexes** likely on `parent_id` and `category_id`. These help with filtering by parent or category, **not for sorting by priority and creation time**.
+
 
 ## 2. Explain the importance of `idx_parent` in the `/tasks/:id/subtasks` API route.
 

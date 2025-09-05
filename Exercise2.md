@@ -84,3 +84,4 @@ Key Characteristics:
 Example:
  - Google Cloud Spanner
  - CockroachDB
+ - tiDB
