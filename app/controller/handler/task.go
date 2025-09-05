@@ -7,12 +7,11 @@ import (
 
 	"github.com/bartick/go-task/app/model"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
 func HandlerGetTasks(c *gin.Context) {
-	db, ok := c.MustGet("db").(*sqlx.DB)
+	db, ok := c.MustGet("db").(model.DBTX)
 	if !ok {
 		log.Error("Failed to get database connection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
@@ -39,7 +38,7 @@ func HandlerGetTask(c *gin.Context) {
 		return
 	}
 
-	db, ok := c.MustGet("db").(*sqlx.DB)
+	db, ok := c.MustGet("db").(model.DBTX)
 	if !ok {
 		log.Error("Failed to get database connection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve task"})
@@ -67,7 +66,7 @@ func HandlerGetSubTasks(c *gin.Context) {
 		return
 	}
 
-	db, ok := c.MustGet("db").(*sqlx.DB)
+	db, ok := c.MustGet("db").(model.DBTX)
 	if !ok {
 		log.Error("Failed to get database connection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
@@ -95,7 +94,7 @@ func HandlerCreateTasks(c *gin.Context) {
 		return
 	}
 
-	db, ok := c.MustGet("db").(*sqlx.DB)
+	db, ok := c.MustGet("db").(model.DBTX)
 	if !ok {
 		log.Error("Failed to get database connection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
@@ -136,7 +135,7 @@ func HandlerUpdateTask(c *gin.Context) {
 		return
 	}
 
-	db, ok := c.MustGet("db").(*sqlx.DB)
+	db, ok := c.MustGet("db").(model.DBTX)
 	if !ok {
 		log.Error("Failed to get database connection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
@@ -169,7 +168,7 @@ func HandlerDeleteTask(c *gin.Context) {
 		return
 	}
 
-	db, ok := c.MustGet("db").(*sqlx.DB)
+	db, ok := c.MustGet("db").(model.DBTX)
 	if !ok {
 		log.Error("Failed to get database connection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})

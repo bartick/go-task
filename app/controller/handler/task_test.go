@@ -1,203 +1,450 @@
 package handler_test
 
 import (
-	"io"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/bartick/go-task/app/controller/handler"
+	"github.com/bartick/go-task/app/model"
+	"github.com/gin-gonic/gin"
+	"github.com/mattn/go-nulltype"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestAllTask(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerGetTask_Success(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/tasks", nil)
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	// Dummy task to return
+	dummyTask := &model.Task{
+		ID:    1,
+		Title: "Test Task",
 	}
-}
 
-func TestGetTask(t *testing.T) {
-	initTestEnvironment()
+	// Expect GetByID to be called inside the handler
+	mockDB.EXPECT().
+		Get(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(dest interface{}, query string, args ...interface{}) error {
+			// dest is a pointer to a Task
+			taskPtr := dest.(*model.Task)
+			*taskPtr = *dummyTask
+			return nil
+		})
 
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.GET("/tasks/:id", handler.HandlerGetTask)
+
+	// Make HTTP request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/tasks/1", nil)
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
-	}
+	// Assertions
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"title":"Test Task"`)
 }
 
-func TestGetTaskNotFound(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerGetTask_Failure(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
 
+	// Expect GetByID to be called and return an error
+	mockDB.EXPECT().
+		Get(mock.Anything, mock.Anything, mock.Anything).
+		Return(sql.ErrNoRows)
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.GET("/tasks/:id", handler.HandlerGetTask)
+
+	// Make HTTP request with invalid ID
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/tasks/9999", nil)
+	req, _ := http.NewRequest("GET", "/tasks/999", nil)
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, w.Code)
-	}
+	// Assertions
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "Task not found")
 }
 
-func TestGetTaskInvalidID(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerGetTask_InvalidID(t *testing.T) {
+	// Create router without DB since it won't be used
+	router := gin.New()
+	router.GET("/tasks/:id", handler.HandlerGetTask)
 
+	// Make HTTP request with invalid ID
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/tasks/abc", nil)
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
+	// Assertions
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid task ID")
 }
 
-func TestGetSubTask(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerGetTasks_Success(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
 
+	// Dummy tasks to return
+	dummyTasks := []model.TaskWithCategory{
+		{Task: model.Task{ID: 1, Title: "Task 1"}},
+		{Task: model.Task{ID: 2, Title: "Task 2"}},
+	}
+
+	// Expect Select to be called inside the handler
+	mockDB.EXPECT().
+		Select(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(dest interface{}, query string, args ...interface{}) error {
+			tasksPtr := dest.(*[]model.TaskWithCategory) // <- important
+			*tasksPtr = dummyTasks
+			return nil
+		})
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.GET("/tasks", handler.HandlerGetTasks)
+
+	// Make HTTP request
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/tasks", nil)
+	router.ServeHTTP(w, req)
+
+	// Assertions
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"title":"Task 1"`)
+	assert.Contains(t, w.Body.String(), `"title":"Task 2"`)
+}
+
+func TestHandlerGetTasks_Failure(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
+
+	// Expect Select to be called and return an error
+	mockDB.EXPECT().
+		Select(mock.Anything, mock.Anything, mock.Anything).
+		Return(sql.ErrConnDone)
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.GET("/tasks", handler.HandlerGetTasks)
+
+	// Make HTTP request
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/tasks", nil)
+	router.ServeHTTP(w, req)
+
+	// Assertions
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "Failed to retrieve tasks")
+}
+
+func TestHandlerGetSubTasks_Success(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
+
+	// Dummy subtasks to return (slice, not struct)
+	dummySubTasks := []model.TaskHierarchy{
+		{
+			Task: model.Task{ID: 1, Title: "Parent Task"},
+		},
+		{
+			Task: model.Task{ID: 2, Title: "Subtask 1", ParentTaskID: nulltype.NullInt64Of(1)},
+		},
+		{
+			Task: model.Task{ID: 3, Title: "Subtask 2", ParentTaskID: nulltype.NullInt64Of(1)},
+		},
+	}
+
+	// Expect Select to be called inside the handler
+	mockDB.EXPECT().
+		Select(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(dest interface{}, query string, args ...interface{}) error {
+			subTasksPtr := dest.(*[]model.TaskHierarchy) // must match
+			*subTasksPtr = dummySubTasks
+			return nil
+		})
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.GET("/tasks/:id/subtasks", handler.HandlerGetSubTasks)
+
+	// Make HTTP request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/tasks/1/subtasks", nil)
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
-	}
+
+	// Assertions
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"title":"Subtask 1"`)
+	assert.Contains(t, w.Body.String(), `"title":"Subtask 2"`)
 }
 
-func TestCreateTask(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerGetSubTasks_Failure(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
 
+	// Expect Select to be called and return an error
+	mockDB.EXPECT().
+		Select(mock.Anything, mock.Anything, mock.Anything).
+		Return(sql.ErrConnDone)
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.GET("/tasks/:id/subtasks", handler.HandlerGetSubTasks)
+
+	// Make HTTP request
 	w := httptest.NewRecorder()
-	reqBody := `{"title":"New Task","description":"Task description","priority":3,"status":"in_progress"}`
-	req, _ := http.NewRequest("POST", "/tasks", nil)
+	req, _ := http.NewRequest("GET", "/tasks/1/subtasks", nil)
+	router.ServeHTTP(w, req)
+
+	// Assertions
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "Failed to retrieve task subtasks")
+}
+
+type mockResult struct {
+	lastInsertID int64
+	rowsAffected int64
+}
+
+func (m *mockResult) LastInsertId() (int64, error) {
+	return m.lastInsertID, nil
+}
+func (m *mockResult) RowsAffected() (int64, error) {
+	return m.rowsAffected, nil
+}
+
+func TestHandlerCreateTasks_Success(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
+
+	// Dummy request and response
+	reqBody := `{"title":"New Task","description":"Task description"}`
+	createdTask := &model.Task{
+		ID:          1,
+		Title:       "New Task",
+		Description: nulltype.NullStringOf("Task description"),
+	}
+
+	// Expect NamedExec (because your INSERT uses named parameters)
+	mockDB.EXPECT().
+		NamedExec(mock.Anything, mock.Anything).
+		Return(&mockResult{lastInsertID: 1, rowsAffected: 1}, nil)
+
+	// Expect Get to fetch the created task
+	mockDB.EXPECT().
+		Get(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(dest interface{}, query string, args ...interface{}) error {
+			taskPtr := dest.(*model.Task)
+			*taskPtr = *createdTask
+			return nil
+		})
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.POST("/tasks", handler.HandlerCreateTasks)
+
+	// Make HTTP request
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/tasks", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
-	router.ServeHTTP(w, req)
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status code %d, got %d", http.StatusCreated, w.Code)
-	}
+	// Assertions
+	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Contains(t, w.Body.String(), `"title":"New Task"`)
 }
 
-func TestCreateTaskInvalidBody(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerCreateTasks_InvalidJSON(t *testing.T) {
+	// Create router without DB since it won't be used
+	router := gin.New()
+	router.POST("/tasks", handler.HandlerCreateTasks)
 
+	// Make HTTP request with invalid JSON
 	w := httptest.NewRecorder()
-	reqBody := `{"title":123,"description":true}`
-	req, _ := http.NewRequest("POST", "/tasks", nil)
+	req, _ := http.NewRequest("POST", "/tasks", strings.NewReader(`{"title":`)) // malformed JSON
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
-	router.ServeHTTP(w, req)
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
+	// Assertions
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), `{"error":"unexpected EOF"}`)
 }
 
-func TestUpdateTask(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerUpdateTask_Success(t *testing.T) {
+	// Initialize mock DB
+	mockDB := model.NewMockDBTX(t)
 
+	// Expect only NamedExec (Update)
+	mockDB.EXPECT().
+		NamedExec(mock.Anything, mock.Anything).
+		Return(&mockResult{rowsAffected: 1}, nil)
+
+	// Create router with the mock DB
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB) // Inject mock DB into context
+	})
+	router.PATCH("/tasks/:id", handler.HandlerUpdateTask)
+
+	// Dummy request body
+	reqBody := `{"title":"Updated Task"}`
+
+	// Make HTTP request
 	w := httptest.NewRecorder()
-	reqBody := `{"title":"Updated Task","description":"Updated description","priority":2,"status":"done"}`
-	req, _ := http.NewRequest("PATCH", "/tasks/3", nil)
+	req, _ := http.NewRequest("PATCH", "/tasks/1", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
-	}
+
+	// Assertions
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"Task updated successfully"`)
 }
 
-func TestUpdateTaskNotFound(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerUpdateTask_InvalidID(t *testing.T) {
+	router := gin.New()
+	router.PATCH("/tasks/:id", handler.HandlerUpdateTask)
 
 	w := httptest.NewRecorder()
-	reqBody := `{"title":"Updated Task","description":"Updated description","priority":2,"status":"done"}`
-	req, _ := http.NewRequest("PATCH", "/tasks/9999", nil)
+	req, _ := http.NewRequest("PATCH", "/tasks/abc", strings.NewReader(`{"title":"x"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, w.Code)
-	}
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), `"Invalid task ID"`)
 }
 
-func TestUpdateTaskInvalidID(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerUpdateTask_InvalidJSON(t *testing.T) {
+	router := gin.New()
+	router.PATCH("/tasks/:id", handler.HandlerUpdateTask)
 
 	w := httptest.NewRecorder()
-	reqBody := `{"title":"Updated Task","description":"Updated description","priority":2,"status":"done"}`
-	req, _ := http.NewRequest("PATCH", "/tasks/abc", nil)
+	req, _ := http.NewRequest("PATCH", "/tasks/1", strings.NewReader(`{invalid json}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), `"error"`)
 }
 
-func TestUpdateTaskInvalidBody(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerUpdateTask_NoFields(t *testing.T) {
+	router := gin.New()
+	router.PATCH("/tasks/:id", handler.HandlerUpdateTask)
 
-	w := httptest.NewRecorder()
-	reqBody := `{"title":123,"description":true}`
-	req, _ := http.NewRequest("PATCH", "/tasks/2", nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
-	router.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
-}
-
-func TestUpdateTaskNoFields(t *testing.T) {
-	initTestEnvironment()
-
-	w := httptest.NewRecorder()
+	// Empty body (all fields invalid)
 	reqBody := `{}`
-	req, _ := http.NewRequest("PATCH", "/tasks/2", nil)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/tasks/1", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = io.NopCloser(strings.NewReader(reqBody))
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), `"No fields to update"`)
 }
 
-func TestDeleteTask(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerUpdateTask_NotFound(t *testing.T) {
+	mockDB := model.NewMockDBTX(t)
+
+	// Update executes but affects 0 rows
+	mockDB.EXPECT().
+		NamedExec(mock.Anything, mock.Anything).
+		Return(&mockResult{rowsAffected: 0}, nil)
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB)
+	})
+	router.PATCH("/tasks/:id", handler.HandlerUpdateTask)
+
+	reqBody := `{"title":"Updated Task"}`
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/tasks/1", strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), `"Task not found"`)
+}
+
+func TestHandlerDeleteTask_Success(t *testing.T) {
+	mockDB := model.NewMockDBTX(t)
+
+	// Expect delete to affect 1 row
+	mockDB.EXPECT().
+		Exec(mock.Anything, mock.Anything, mock.Anything).
+		Return(&mockResult{rowsAffected: 1}, nil)
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB)
+	})
+	router.DELETE("/tasks/:id", handler.HandlerDeleteTask)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/tasks/1", nil)
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
-	}
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"Task deleted successfully"`)
 }
 
-func TestDeleteTaskNotFound(t *testing.T) {
-	initTestEnvironment()
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("DELETE", "/tasks/9999", nil)
-	router.ServeHTTP(w, req)
-	if w.Code != http.StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, w.Code)
-	}
-}
-
-func TestDeleteTaskInvalidID(t *testing.T) {
-	initTestEnvironment()
+func TestHandlerDeleteTask_InvalidID(t *testing.T) {
+	router := gin.New()
+	router.DELETE("/tasks/:id", handler.HandlerDeleteTask)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/tasks/abc", nil)
 	router.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), `"Invalid task ID"`)
+}
+
+func TestHandlerDeleteTask_NotFound(t *testing.T) {
+	mockDB := model.NewMockDBTX(t)
+
+	// Exec returns 0 rows affected
+	mockDB.EXPECT().
+		Exec(mock.Anything, mock.Anything, mock.Anything).
+		Return(&mockResult{rowsAffected: 0}, nil)
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("db", mockDB)
+	})
+	router.DELETE("/tasks/:id", handler.HandlerDeleteTask)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/tasks/1", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), `"Task not found"`)
 }
