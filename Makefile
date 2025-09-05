@@ -69,7 +69,7 @@ build:
 
 # Test
 test:
-	go test -v ./app/controller/handler/...
+	go test -v ./app/controller/handler/... ./app/model/...
 
 # A simple help target to explain how to use the Makefile.
 help:

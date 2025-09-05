@@ -3,7 +3,6 @@ package handler_test
 import (
 	"sync"
 
-	"github.com/bartick/go-task/app/database"
 	"github.com/bartick/go-task/app/model"
 	"github.com/bartick/go-task/app/route"
 	"github.com/bartick/go-task/app/shared/utils"
@@ -14,7 +13,7 @@ import (
 
 var (
 	config *model.Configuration
-	db     *sqlx.DB
+	db     model.DBTX
 	router *gin.Engine
 	once   sync.Once
 	log    *zap.Logger
@@ -28,11 +27,11 @@ func initTestEnvironment() {
 		if err != nil {
 			log.Fatal("Configuration loading failed", zap.String("err", err.Error()))
 		}
-		db, err = database.InitDatabases(config.Database)
+		db, err = model.InitDatabases(config.Database)
 		if err != nil {
 			log.Fatal("Database initialization failed", zap.String("err", err.Error()))
 		}
-		router = route.AddAPIRouter(db)
+		router = route.AddAPIRouter(db.(*sqlx.DB))
 
 		log.Info("Test environment initialized")
 	})

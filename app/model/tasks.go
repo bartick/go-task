@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	null "github.com/mattn/go-nulltype"
 )
 
@@ -149,13 +148,13 @@ const (
 	`
 )
 
-func GetAllTasks(db *sqlx.DB) ([]TaskWithCategory, error) {
+func GetAllTasks(db DBTX) ([]TaskWithCategory, error) {
 	var tasks []TaskWithCategory
 	err := db.Select(&tasks, queryAllGetTasks)
 	return tasks, err
 }
 
-func GetTaskWithSubtasks(db *sqlx.DB, taskID int64) (*TaskHierarchy, error) {
+func GetTaskWithSubtasks(db DBTX, taskID int64) (*TaskHierarchy, error) {
 	// Step 1: Fetch all tasks in the hierarchy (parent and all descendants) into a flat list.
 	var flatTasks []TaskHierarchy
 	if err := db.Select(&flatTasks, queryGetTaskHierarchy, taskID); err != nil {
@@ -194,7 +193,7 @@ func GetTaskWithSubtasks(db *sqlx.DB, taskID int64) (*TaskHierarchy, error) {
 	return nil, sql.ErrNoRows
 }
 
-func CreateTask(db *sqlx.DB, req *CreateTaskRequest) (*Task, error) {
+func CreateTask(db DBTX, req *CreateTaskRequest) (*Task, error) {
 
 	result, err := db.NamedExec(queryCreateTask, map[string]interface{}{
 		"title":          req.Title,
@@ -217,7 +216,7 @@ func CreateTask(db *sqlx.DB, req *CreateTaskRequest) (*Task, error) {
 	return GetByID(db, id)
 }
 
-func UpdateTask(db *sqlx.DB, taskID uint64, updates *UpdateTaskRequest) (int64, error) {
+func UpdateTask(db DBTX, taskID uint64, updates *UpdateTaskRequest) (int64, error) {
 
 	res, err := db.NamedExec(queryUpdateTask, map[string]interface{}{
 		"id":             taskID,
@@ -236,7 +235,7 @@ func UpdateTask(db *sqlx.DB, taskID uint64, updates *UpdateTaskRequest) (int64, 
 	return res.RowsAffected()
 }
 
-func DeleteTask(db *sqlx.DB, taskID uint64) (int64, error) {
+func DeleteTask(db DBTX, taskID uint64) (int64, error) {
 	req, err := db.Exec(queryDeleteTask, taskID)
 	if err != nil {
 		return 0, err
@@ -244,7 +243,7 @@ func DeleteTask(db *sqlx.DB, taskID uint64) (int64, error) {
 	return req.RowsAffected()
 }
 
-func GetByID(db *sqlx.DB, taskID int64) (*Task, error) {
+func GetByID(db DBTX, taskID int64) (*Task, error) {
 	query := `
         SELECT id, title, description, status, priority, due_date, 
                completed_at, parent_task_id, category_id, created_at, updated_at

@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bartick/go-task/app/database"
+	"github.com/bartick/go-task/app/model"
 	"github.com/bartick/go-task/app/route"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -21,7 +21,7 @@ func runTaskAPI() {
 	fmt.Println(config)
 
 	// Database Init
-	db, err := database.InitDatabases(config.Database)
+	db, err := model.InitDatabases(config.Database)
 	if err != nil {
 		log.Fatal("Database initialization failed", zap.String("err", err.Error()))
 	}
@@ -54,10 +54,6 @@ func runTaskAPI() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Error("Server forced to shutdown:", zap.String("err", err.Error()))
-	}
-
-	if err := db.Close(); err != nil {
-		log.Error("Database connection close failed:", zap.String("err", err.Error()))
 	}
 
 	log.Info("Server exiting")

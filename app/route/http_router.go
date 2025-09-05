@@ -2,9 +2,9 @@ package route
 
 import (
 	"github.com/bartick/go-task/app/controller/handler"
+	"github.com/bartick/go-task/app/model"
 	"github.com/bartick/go-task/app/route/middleware"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 	pathSubTasks = "/tasks/:id/subtasks"
 )
 
-func AddAPIRouter(db *sqlx.DB) *gin.Engine {
+func AddAPIRouter(db model.DBTX) *gin.Engine {
 	router := gin.New()
 	router.Use(middleware.LogRequest(log))
 	router.Use(middleware.CORSMiddleware())

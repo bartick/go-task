@@ -1,15 +1,23 @@
-package database
+package model
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/bartick/go-task/app/model"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
 
-func InitDatabases(config model.DatabaseConfig) (*sqlx.DB, error) {
+// DBTX is an abstraction over sqlx.DB and sqlx.Tx.
+type DBTX interface {
+	Get(dest interface{}, query string, args ...interface{}) error
+	Select(dest interface{}, query string, args ...interface{}) error
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	NamedExec(query string, arg interface{}) (sql.Result, error)
+}
+
+func InitDatabases(config DatabaseConfig) (DBTX, error) {
 	var dsn string
 	if config.DBUser == "" && config.DBPass == "" {
 		dsn = fmt.Sprintf("tcp(%s:%s)/%s?parseTime=true",
